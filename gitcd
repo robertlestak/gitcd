@@ -1,0 +1,49 @@
+#!/bin/bash
+
+DEPLOY_CMD=""
+BRANCH=""
+MONITOR_PATH=""
+
+git_changed () {
+  git fetch --all > /dev/null 2>&1
+  HAS_CHANGES="false"
+  if [[ ! -z "$(git status | grep 'use "git pull"')" ]]; then
+    HAS_CHANGES="true"
+  fi
+  echo $HAS_CHANGES
+}
+
+deploy_path () {
+  pushd "$1" > /dev/null
+  if [[ $(git_changed) == "true" ]]; then
+      git reset --hard origin/$BRANCH
+    if [[ ! -z "$DEPLOY_CMD" ]]; then
+      bash -c "$DEPLOY_CMD"
+    fi
+  fi
+  popd > /dev/null
+}
+
+parse_opts () {
+  while getopts "c:r:" o; do
+    case $o in
+      b)
+	BRANCH="$OPTARG"
+	;;
+      c)
+        DEPLOY_CMD="$OPTARG"
+        ;;
+      r)
+        MONITOR_PATH="$OPTARG"
+        ;;
+    esac
+  done
+  BRANCH=${BRANCH:-"master"}
+}
+
+main () {
+  parse_opts "$@"
+  deploy_path "$MONITOR_PATH"
+}
+
+main "$@"
